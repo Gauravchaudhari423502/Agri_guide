@@ -1,0 +1,263 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Access - AgriGuide</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+        .sidebar {
+            background-color: #dc3545;
+            color: white;
+            height: 100vh;
+            position: fixed;
+            padding-top: 20px;
+        }
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 15px 20px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        .sidebar .nav-link i {
+            margin-right: 10px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #dc3545;
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 15px 20px;
+        }
+        .stats-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        .db-info {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+        }
+        .user-table {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .table th {
+            background-color: #dc3545;
+            color: white;
+            border: none;
+        }
+        .superuser-badge {
+            background-color: #dc3545;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        .staff-badge {
+            background-color: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="text-center mb-4">
+                    <h3><i class="fas fa-database"></i> Database</h3>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'dashboard' %}">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#">
+                            <i class="fas fa-database"></i> Database Access
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'admin:index' %}" target="_blank">
+                            <i class="fas fa-cog"></i> Django Admin
+                        </a>
+                    </li>
+                    <li class="nav-item mt-5">
+                        <a class="nav-link" href="{% url 'logout' %}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <h2><i class="fas fa-database"></i> Database Access</h2>
+                <p class="text-muted">Superuser database management and monitoring</p>
+                
+                <!-- Database Information -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="card db-info">
+                            <div class="card-body">
+                                <h5><i class="fas fa-info-circle"></i> Database Information</h5>
+                                <p><strong>Database Path:</strong> <code>{{ db_path }}</code></p>
+                                <p><strong>Database Size:</strong> {{ db_size|filesizeformat }}</p>
+                                <p><strong>Database Type:</strong> SQLite3</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card stats-card">
+                            <div class="card-body">
+                                <h5><i class="fas fa-chart-bar"></i> User Statistics</h5>
+                                <div class="row text-center">
+                                    <div class="col-6">
+                                        <h3>{{ total_users }}</h3>
+                                        <small>Total Users</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <h3>{{ active_users }}</h3>
+                                        <small>Active Users</small>
+                                    </div>
+                                </div>
+                                <div class="row text-center mt-2">
+                                    <div class="col-6">
+                                        <h4>{{ superusers }}</h4>
+                                        <small>Superusers</small>
+                                    </div>
+                                    <div class="col-6">
+                                        <h4>{{ staff_users }}</h4>
+                                        <small>Staff Users</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Users -->
+                <div class="card user-table">
+                    <div class="card-header">
+                        <h5><i class="fas fa-users"></i> Recent Users</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Email</th>
+                                        <th>Status</th>
+                                        <th>Joined</th>
+                                        <th>Last Login</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for user in recent_users %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ user.username }}</strong>
+                                            {% if user.is_superuser %}
+                                                <span class="superuser-badge ms-2">Superuser</span>
+                                            {% elif user.is_staff %}
+                                                <span class="staff-badge ms-2">Staff</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ user.email|default:"No email" }}</td>
+                                        <td>
+                                            {% if user.is_active %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Inactive</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>{{ user.date_joined|date:"M d, Y" }}</td>
+                                        <td>
+                                            {% if user.last_login %}
+                                                {{ user.last_login|date:"M d, Y H:i" }}
+                                            {% else %}
+                                                <span class="text-muted">Never</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Database Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-tools"></i> Database Actions</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="d-grid">
+                                    <a href="{% url 'admin:index' %}" target="_blank" class="btn btn-primary">
+                                        <i class="fas fa-cog"></i> Django Admin Panel
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-grid">
+                                    <button class="btn btn-info" onclick="downloadDatabase()">
+                                        <i class="fas fa-download"></i> Download Database
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="d-grid">
+                                    <button class="btn btn-warning" onclick="refreshData()">
+                                        <i class="fas fa-sync"></i> Refresh Data
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function downloadDatabase() {
+            // In a real application, this would trigger a database download
+            alert('Database download functionality would be implemented here.');
+        }
+        
+        function refreshData() {
+            location.reload();
+        }
+    </script>
+</body>
+</html>

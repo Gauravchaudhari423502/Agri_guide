@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriGuide Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    {% load static %}
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Arial', sans-serif;
+        }
+        .sidebar {
+            background-color: #28a745;
+            color: white;
+            height: 100vh;
+            position: fixed;
+            padding-top: 20px;
+        }
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 15px 20px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+        .sidebar .nav-link i {
+            margin-right: 10px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 20px;
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .card-header {
+            background-color: #28a745;
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 15px 20px;
+        }
+        .form-control, .form-select {
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 15px;
+        }
+        .btn-predict {
+            background-color: #28a745;
+            border-color: #28a745;
+            border-radius: 10px;
+            padding: 12px 25px;
+        }
+        .btn-predict:hover {
+            background-color: #218838;
+            border-color: #1e7e34;
+        }
+        .chat-container {
+            height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+        .message {
+            padding: 10px 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            max-width: 80%;
+        }
+        .user-message {
+            background-color: #dcf8c6;
+            margin-left: auto;
+        }
+        .bot-message {
+            background-color: #f1f0f0;
+        }
+        .language-selector {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+        }
+        #result-container {
+            display: none;
+            margin-top: 20px;
+        }
+        .result-card {
+            border-left: 5px solid #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar">
+                <div class="text-center mb-4">
+                    <h3>AgriGuide</h3>
+                </div>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#" id="dashboard-link">
+                            <i class="fas fa-home"></i> Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="prediction-link">
+                            <i class="fas fa-seedling"></i> Crop Prediction
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="chatbot-link">
+                            <i class="fas fa-comments"></i> AgriChat
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" id="profile-link">
+                            <i class="fas fa-user"></i> Profile
+                        </a>
+                    </li>
+                    {% if request.user.is_superuser %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'database' %}">
+                            <i class="fas fa-database"></i> Database Access
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item mt-5">
+                        <a class="nav-link" href="{% url 'logout' %}">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <!-- Language Selector -->
+                <div class="language-selector">
+                    <select class="form-select" id="language-select">
+                        <option value="en">English</option>
+                        <option value="hi">हिन्दी (Hindi)</option>
+                        <option value="es">Español (Spanish)</option>
+                        <option value="fr">Français (French)</option>
+                        <option value="de">Deutsch (German)</option>
+                        <option value="it">Italiano (Italian)</option>
+                        <option value="pt">Português (Portuguese)</option>
+                        <option value="ru">Русский (Russian)</option>
+                        <option value="ja">日本語 (Japanese)</option>
+                        <option value="ko">한국어 (Korean)</option>
+                        <option value="zh">中文 (Chinese)</option>
+                        <option value="ar">العربية (Arabic)</option>
+                        <option value="bn">বাংলা (Bengali)</option>
+                        <option value="ta">தமிழ் (Tamil)</option>
+                        <option value="te">తెలుగు (Telugu)</option>
+                        <option value="ml">മലയാളം (Malayalam)</option>
+                        <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                        <option value="gu">ગુજરાતી (Gujarati)</option>
+                        <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+                    </select>
+                </div>
+
+                <!-- Welcome Section -->
+                <div id="dashboard-section">
+                    <h2>Welcome, {{ request.user.username }}!</h2>
+                    <p>What would you like to do today?</p>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-seedling"></i> Crop Prediction</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p>Get personalized crop recommendations based on your soil, weather, and water conditions.</p>
+                                    <button class="btn btn-primary" id="go-to-prediction">Start Prediction</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="fas fa-comments"></i> AgriChat</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p>Chat with our AI assistant to get answers to your agriculture-related questions.</p>
+                                    <button class="btn btn-primary" id="go-to-chat">Start Chatting</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Crop Prediction Section -->
+                <div id="prediction-section" style="display: none;">
+                    <h2>Crop Prediction</h2>
+                    <p>Fill in the details below to get crop recommendations for your land.</p>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Soil and Weather Parameters</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="prediction-form">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="nitrogen" class="form-label">Nitrogen (N) Content</label>
+                                            <input type="number" class="form-control" id="nitrogen" placeholder="0-100" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="phosphorus" class="form-label">Phosphorus (P) Content</label>
+                                            <input type="number" class="form-control" id="phosphorus" placeholder="0-100" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="potassium" class="form-label">Potassium (K) Content</label>
+                                            <input type="number" class="form-control" id="potassium" placeholder="0-100" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="temperature" class="form-label">Temperature (°C)</label>
+                                            <input type="number" step="0.01" class="form-control" id="temperature" placeholder="0-50" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="humidity" class="form-label">Humidity (%)</label>
+                                            <input type="number" step="0.01" class="form-control" id="humidity" placeholder="0-100" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="ph" class="form-label">pH Value</label>
+                                            <input type="number" step="0.01" class="form-control" id="ph" placeholder="0-14" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="rainfall" class="form-label">Rainfall (mm)</label>
+                                            <input type="number" step="0.01" class="form-control" id="rainfall" placeholder="0-300" required>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary btn-predict">Predict Crop</button>
+                            </form>
+                            
+                            <div id="result-container">
+                                <div class="card result-card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Recommended Crop</h5>
+                                        <h3 id="predicted-crop" class="text-success">Rice</h3>
+                                        <p id="crop-description">Rice is a suitable crop for your soil and weather conditions. It thrives in humid environments with good water availability.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chatbot Section -->
+                <div id="chatbot-section" style="display: none;">
+                    <h2>AgriChat</h2>
+                    <p>Ask any agriculture-related questions to our AI assistant.</p>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Chat with AgriBot</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="chat-container" id="chat-messages">
+                                <div class="message bot-message">
+                                    <p>Hello! I'm AgriBot, your agriculture assistant. How can I help you today?</p>
+                                </div>
+                            </div>
+                            <form id="chat-form">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="user-message" placeholder="Type your message here...">
+                                    <button class="btn btn-primary" type="submit">
+                                        <i class="fas fa-paper-plane"></i> Send
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Profile Section -->
+                <div id="profile-section" style="display: none;">
+                    <h2>Your Profile</h2>
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Account Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <p><strong>Username:</strong> {{ request.user.username }}</p>
+                            <p><strong>Date Joined:</strong> {{ request.user.date_joined|date:"F d, Y" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Navigation
+        document.getElementById('dashboard-link').addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('dashboard');
+        });
+        
+        document.getElementById('prediction-link').addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('prediction');
+        });
+        
+        document.getElementById('chatbot-link').addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('chatbot');
+        });
+        
+        document.getElementById('profile-link').addEventListener('click', function(e) {
+            e.preventDefault();
+            showSection('profile');
+        });
+        
+        document.getElementById('go-to-prediction').addEventListener('click', function() {
+            showSection('prediction');
+        });
+        
+        document.getElementById('go-to-chat').addEventListener('click', function() {
+            showSection('chatbot');
+        });
+        
+        function showSection(sectionName) {
+            // Hide all sections
+            document.getElementById('dashboard-section').style.display = 'none';
+            document.getElementById('prediction-section').style.display = 'none';
+            document.getElementById('chatbot-section').style.display = 'none';
+            document.getElementById('profile-section').style.display = 'none';
+            
+            // Remove active class from all links
+            document.querySelectorAll('.sidebar .nav-link').forEach(function(link) {
+                link.classList.remove('active');
+            });
+            
+            // Show selected section and activate link
+            document.getElementById(sectionName + '-section').style.display = 'block';
+            document.getElementById(sectionName + '-link').classList.add('active');
+        }
+        
+        // Crop Prediction Form
+        document.getElementById('prediction-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form data
+            const formData = {
+                nitrogen: document.getElementById('nitrogen').value,
+                phosphorus: document.getElementById('phosphorus').value,
+                potassium: document.getElementById('potassium').value,
+                temperature: document.getElementById('temperature').value,
+                humidity: document.getElementById('humidity').value,
+                ph: document.getElementById('ph').value,
+                rainfall: document.getElementById('rainfall').value
+            };
+            
+            // Show loading
+            document.getElementById('predicted-crop').textContent = 'Analyzing...';
+            document.getElementById('crop-description').textContent = 'Please wait while we analyze your soil and weather data.';
+            document.getElementById('result-container').style.display = 'block';
+            
+            // Send data to API
+            fetch('/api/crop-prediction/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(formData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    document.getElementById('predicted-crop').textContent = 'Error';
+                    document.getElementById('crop-description').textContent = 'Sorry, there was an error processing your request.';
+                } else {
+                    document.getElementById('predicted-crop').textContent = data.crop;
+                    document.getElementById('crop-description').textContent = data.description;
+                }
+            })
+            .catch(error => {
+                document.getElementById('predicted-crop').textContent = 'Error';
+                document.getElementById('crop-description').textContent = 'Sorry, there was an error processing your request.';
+                console.error('Error:', error);
+            });
+            
+            // Scroll to results
+            document.getElementById('result-container').scrollIntoView({
+                behavior: 'smooth'
+            });
+        });
+        
+        // Chat functionality
+        document.getElementById('chat-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const userMessage = document.getElementById('user-message').value;
+            if (!userMessage.trim()) return;
+            
+            // Add user message to chat
+            addMessage(userMessage, 'user');
+            
+            // Clear input
+            document.getElementById('user-message').value = '';
+            
+            // Show loading message
+            const loadingMessage = addMessage("Thinking...", 'bot');
+            
+            // Get selected language
+            const selectedLanguage = document.getElementById('language-select').value;
+            
+            // Send message to Gemini API
+            fetch('/api/chatbot/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    message: userMessage,
+                    language: selectedLanguage
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Remove loading message
+                loadingMessage.remove();
+                
+                if (data.error) {
+                    addMessage("Sorry, I encountered an error. Please try again.", 'bot');
+                } else {
+                    addMessage(data.response, 'bot');
+                }
+            })
+            .catch(error => {
+                // Remove loading message
+                loadingMessage.remove();
+                addMessage("Sorry, I'm having trouble connecting. Please try again.", 'bot');
+                console.error('Error:', error);
+            });
+        });
+        
+        function addMessage(message, sender) {
+            const chatContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message');
+            
+            if (sender === 'user') {
+                messageDiv.classList.add('user-message');
+            } else {
+                messageDiv.classList.add('bot-message');
+            }
+            
+            messageDiv.innerHTML = `<p>${message}</p>`;
+            chatContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom of chat
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            return messageDiv;
+        }
+        
+        // CSRF token function
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Language selector with translation functionality
+        document.getElementById('language-select').addEventListener('change', function() {
+            const language = this.value;
+            console.log(`Language changed to: ${language}`);
+            
+            // Translate all text elements on the page
+            translatePage(language);
+        });
+        
+        // Function to translate page content
+        function translatePage(targetLanguage) {
+            if (targetLanguage === 'en') {
+                // If English, show original text
+                location.reload();
+                return;
+            }
+            
+            // Get all text elements to translate
+            const elementsToTranslate = [
+                { selector: 'h1, h2, h3, h4, h5, h6', attribute: 'textContent' },
+                { selector: 'p', attribute: 'textContent' },
+                { selector: 'label', attribute: 'textContent' },
+                { selector: 'button', attribute: 'textContent' },
+                { selector: 'a', attribute: 'textContent' },
+                { selector: '.nav-link', attribute: 'textContent' },
+                { selector: 'input[placeholder]', attribute: 'placeholder' }
+            ];
+            
+            elementsToTranslate.forEach(({ selector, attribute }) => {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(element => {
+                    const text = element[attribute];
+                    if (text && text.trim() && !element.dataset.translated) {
+                        translateText(text, targetLanguage).then(translatedText => {
+                            if (translatedText && translatedText !== text) {
+                                element[attribute] = translatedText;
+                                element.dataset.translated = 'true';
+                            }
+                        }).catch(error => {
+                            console.error('Translation error:', error);
+                        });
+                    }
+                });
+            });
+        }
+        
+        // Function to translate individual text
+        function translateText(text, targetLanguage) {
+            return fetch('/api/translate/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    text: text,
+                    target_language: targetLanguage
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    return data.translated_text;
+                } else {
+                    console.error('Translation failed:', data.error);
+                    return text; // Return original text if translation fails
+                }
+            })
+            .catch(error => {
+                console.error('Translation error:', error);
+                return text; // Return original text if request fails
+            });
+        }
+    </script>
+</body>
+</html>
